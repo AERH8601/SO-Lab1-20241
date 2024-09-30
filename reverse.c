@@ -10,9 +10,15 @@ test
 */
 
 // Funcion mani
-int main()
+
+int main(int argc, char *argv[])
 {
-    printf("Este es mi primer archivo en C");
+    // Verificar si hay más de 3 argumentos (incluyendo el nombre del programa)
+    if (argc > 3)
+    {
+        fprintf(stderr, "usage: reverse <input> <output>\n");
+        exit(1);
+    }
 
     return 0;
 }
