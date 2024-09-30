@@ -1,1 +1,1 @@
-reverse: cannot open file 'tests/5.in'
+reverse: input and output file must differ
