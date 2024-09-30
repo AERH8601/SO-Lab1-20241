@@ -1,2 +1,1 @@
 reverse: input and output file must differ
-./tester/run-tests.sh: line 27: 96141 Segmentation fault      ./reverse tests/3.out tests/3.out
