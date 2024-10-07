@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 /*
 test
@@ -16,8 +17,9 @@ test
 int main(int argc, char *argv[])
 {
     struct stat input_stat, output_stat;
-    FILE *input_file, *output_file;
-    char **lines = NULL; // Para almacenar las lineas del archivo
+    FILE *input_file = stdin;   // Leer de stdin por defecto
+    FILE *output_file = stdout; // Escribir en stdout por defecto
+    char **lines = NULL;        // Para almacenar las lineas del archivo
     char *line = NULL;
     size_t len = 0;
     ssize_t read;
@@ -37,6 +39,21 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    // Obtener información del archivo de entrada
+    // Para test 5: Verificar si los archivos de entrada y salida son el mismo archivo físico (hardlinked)
+    if (argc == 3)
+    {
+        if (stat(argv[1], &input_stat) == 0 && stat(argv[2], &output_stat) == 0)
+        {
+            if (input_stat.st_ino == output_stat.st_ino)
+            {
+                // Si los inodos son iguales, los archivos son el mismo
+                fprintf(stderr, "reverse: input and output file must differ\n");
+                exit(1);
+            }
+        }
+    }
+
     // Para test 2 y 3: Si se pasa un archivo de entrada, verificar si existe
     if (argc > 1)
     {
@@ -47,7 +64,9 @@ int main(int argc, char *argv[])
             fprintf(stderr, "reverse: cannot open file '%s'\n", argv[1]);
             exit(1);
         }
-
+    }
+    if (argc == 3)
+    {
         // Abrir el archivo de salida
         output_file = fopen(argv[2], "w");
         if (output_file == NULL)
@@ -68,49 +87,45 @@ int main(int argc, char *argv[])
                 exit(1);
             }
         }
-
-        // Leer el archivo de entrada línea por línea, invertir y escribir en el archivo de salida
-        while ((read = getline(&line, &len, input_file)) != -1)
-        {
-            lines = realloc(lines, sizeof(char *) * (line_count + 1));
-            lines[line_count] = strdup(line); // Copia la línea
-            line_count++;
-        }
-
-        // Escribir las líneas en orden inverso en el archivo de salida
-        for (int i = line_count - 1; i >= 0; i--)
-        {
-            fputs(lines[i], output_file);
-            free(lines[i]); // Liberar la memoria de la línea
-        }
-
-        // Liberar la memoria de las líneas
-        free(lines);
-
-        // Cerrar el archivo después de verificar que se abrió correctamente
-
-        fclose(input_file);
-        fclose(output_file);
-
-        if (line)
-        {
-            free(line);
-        }
     }
 
-    // Obtener información del archivo de entrada
-    // Para test 5: Verificar si los archivos de entrada y salida son el mismo archivo físico (hardlinked)
-    if (argc == 3)
+    // Leer el archivo de entrada línea por línea, invertir y escribir en el archivo de salida
+    while ((read = getline(&line, &len, input_file)) != -1)
     {
-        if (stat(argv[1], &input_stat) == 0 && stat(argv[2], &output_stat) == 0)
+        lines = realloc(lines, sizeof(char *) * (line_count + 1));
+        if (lines == NULL)
         {
-            if (input_stat.st_ino == output_stat.st_ino)
-            {
-                // Si los inodos son iguales, los archivos son el mismo
-                fprintf(stderr, "reverse: input and output file must differ\n");
-                exit(1);
-            }
+            fprintf(stderr, "malloc failed\n");
+            exit(1);
         }
+        lines[line_count] = strdup(line); // Copia la línea
+        if (lines[line_count] == NULL)
+        {
+            fprintf(stderr, "strdup failed\n");
+            exit(1);
+        }
+        line_count++;
+    }
+
+    // Escribir las líneas en orden inverso en el archivo de salida
+    for (int i = line_count - 1; i >= 0; i--)
+    {
+        fputs(lines[i], output_file);
+        free(lines[i]); // Liberar la memoria de la línea
+    }
+
+    // Liberar la memoria de las líneas
+    free(lines);
+
+    // Cerrar los archivos si no estamos usando stdin o stdout
+    if (input_file != stdin)
+        fclose(input_file);
+    if (output_file != stdout)
+        fclose(output_file);
+
+    if (line)
+    {
+        free(line);
     }
 
     return 0;
